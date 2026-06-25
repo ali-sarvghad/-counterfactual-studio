@@ -108,6 +108,15 @@ npm run build      # outputs frontend/dist, which the backend serves at /
 In production, build the frontend and run only the backend — `api/main.py`
 mounts `frontend/dist` at `/`, so the whole app is served from one process.
 
+## Deploying (hosted app)
+
+The repo ships a root `Dockerfile` that builds the frontend and the Python
+stack into a single image serving the API and UI on one port (`$PORT`, default
+`7860`). See **[DEPLOY.md](DEPLOY.md)** for step-by-step instructions —
+Hugging Face Spaces (recommended, free CPU tier handles PyMC), Render/Fly, or a
+local `docker run`. Note: this is not a static site (it runs MCMC), so plain
+GitHub Pages cannot host it.
+
 ## The wizard
 
 1. **Start** — pick a path (your data, or assumptions) and a starting design

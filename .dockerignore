@@ -1,0 +1,20 @@
+# Frontend: rebuilt inside the image.
+frontend/node_modules
+frontend/dist
+
+# Python caches / local virtualenvs.
+**/__pycache__
+**/*.pyc
+backend/.venv
+backend/.pytest_cache
+.venv
+
+# Runtime data (SQLite + generated artifacts) must never be baked into the image.
+backend/data
+data
+
+# VCS / editor / OS noise.
+.git
+.gitignore
+.DS_Store
+*.swp
