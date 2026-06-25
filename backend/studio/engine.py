@@ -252,16 +252,16 @@ class GenerationResult:
     source: str                    # "posterior" or "assumptions"
 
 
-def _posterior_cell_means(fit: OutcomeFit, design: StudyDesign,
-                          n_participants: int, rng: np.random.Generator):
-    """Per-counterfactual cell means by reading the posterior.
+def _posterior_cell_draws(fit: OutcomeFit, design: StudyDesign):
+    """All posterior draws of the per-cell mean for a brand-new participant.
 
-    Returns an array of shape (n_participants, n_cells) plus the residual scale
-    sigma per participant (for continuous outcomes). Each counterfactual = one
-    posterior draw with a freshly-sampled participant random effect.
+    Returns ``(means, sigma, cells_df)`` where ``means`` has shape
+    (n_draws, n_cells) on the model's link scale (the parent parameter), and
+    ``sigma`` is (n_draws,) for continuous families or ``None``. Each draw row
+    is one heterogeneous counterfactual participant (population effect + a
+    freshly-sampled participant random effect, via ``sample_new_groups``).
     """
-    grid = cell_grid(design)
-    grid = grid.copy()
+    grid = cell_grid(design).copy()
     grid[design.grouping] = pd.Categorical(["__cf__"] * len(grid))
     param = _PARENT_PARAM[fit.outcome.family]
 
@@ -273,43 +273,79 @@ def _posterior_cell_means(fit: OutcomeFit, design: StudyDesign,
     arr = fit.idata.posterior[param]              # (chain, draw, obs)
     stacked = arr.stack(sample=("chain", "draw")).transpose("sample", arr.dims[-1])
     means = np.asarray(stacked.values)            # (n_draws, n_cells)
-    n_draws = means.shape[0]
-
-    idx = rng.integers(0, n_draws, size=n_participants) if n_participants != n_draws \
-        else np.arange(n_draws)
 
     sigma = None
     if fit.outcome.family in (OutcomeFamily.LOGNORMAL, OutcomeFamily.GAUSSIAN):
-        s = fit.idata.posterior["sigma"].stack(sample=("chain", "draw")).values
-        sigma = np.asarray(s)[idx]
-    return means[idx], sigma, grid.drop(columns=[design.grouping])
+        sigma = np.asarray(
+            fit.idata.posterior["sigma"].stack(sample=("chain", "draw")).values
+        )
+    return means, sigma, grid.drop(columns=[design.grouping])
 
 
-def generate_from_fit(bundle: FitBundle, n_participants: int = 2000,
-                      seed: int = 7) -> GenerationResult:
-    rng = np.random.default_rng(seed)
-    design = bundle.design
-    base_grid = cell_grid(design)
-    n_cells = len(base_grid)
+def posterior_draws(bundle: FitBundle) -> dict[str, Any]:
+    """Extract a serializable cache of posterior cell-mean draws from a fit.
 
-    specs: list[dict] = []
+    This is computed once after fitting so that counterfactual generation needs
+    only NumPy arrays -- the (heavy, version-sensitive) Bambi model and
+    InferenceData can be discarded afterwards.
+    """
+    out: dict[str, Any] = {"grouping": bundle.design.grouping, "outcomes": {}}
     for name, fit in bundle.fits.items():
-        means, sigma, _ = _posterior_cell_means(fit, design, n_participants, rng)
-        if fit.outcome.family == OutcomeFamily.LOGNORMAL:
-            # `means` are on the log scale (mu); E[T] = exp(mu + sigma^2/2).
+        means, sigma, _ = _posterior_cell_draws(fit, bundle.design)
+        out["outcomes"][name] = {
+            "family": fit.outcome.family.value,
+            "guess_rate": fit.outcome.guess_rate,
+            "trials_per_cell": fit.outcome.trials_per_cell,
+            "raw": means,            # (n_draws, n_cells), link scale
+            "sigma": sigma,          # (n_draws,) or None
+        }
+    return out
+
+
+def _subsample(n_draws: int, n: int, rng: np.random.Generator) -> np.ndarray:
+    if n == n_draws:
+        return np.arange(n_draws)
+    return rng.integers(0, n_draws, size=n)
+
+
+def generate_from_draws(design: StudyDesign, draws: dict[str, Any],
+                        n_participants: int = 2000, seed: int = 7
+                        ) -> GenerationResult:
+    """Generate counterfactuals from a cached posterior-draws dict.
+
+    ``draws`` is the structure returned by :func:`posterior_draws`. Each
+    counterfactual participant is one (sub)sampled posterior draw.
+    """
+    rng = np.random.default_rng(seed)
+    base_grid = cell_grid(design)
+    specs: list[dict] = []
+    for outcome in design.outcomes:
+        cache = draws["outcomes"][outcome.name]
+        means_all = np.asarray(cache["raw"])
+        sigma_all = cache["sigma"]
+        sigma_all = None if sigma_all is None else np.asarray(sigma_all)
+        idx = _subsample(means_all.shape[0], n_participants, rng)
+        means = means_all[idx]
+        sigma = None if sigma_all is None else sigma_all[idx]
+        if outcome.family == OutcomeFamily.LOGNORMAL:
             s2 = (sigma ** 2)[:, None] if sigma is not None else 0.0
             natural = np.exp(means + s2 / 2.0)
         else:
             natural = means
-        specs.append({"outcome": fit.outcome, "raw": means,
+        specs.append({"outcome": outcome, "raw": means,
                       "natural": natural, "sigma": sigma})
 
     cm = _cell_means_frame(design, base_grid, specs, n_participants)
     trials = _expand_trials_combined(design, specs, base_grid, n_participants, rng)
-    return GenerationResult(
-        cell_means=cm, trials=trials,
-        n_participants=n_participants, source="posterior",
-    )
+    return GenerationResult(cell_means=cm, trials=trials,
+                            n_participants=n_participants, source="posterior")
+
+
+def generate_from_fit(bundle: FitBundle, n_participants: int = 2000,
+                      seed: int = 7) -> GenerationResult:
+    """Convenience wrapper: extract posterior draws from a live fit and generate."""
+    return generate_from_draws(bundle.design, posterior_draws(bundle),
+                               n_participants, seed)
 
 
 def _cell_means_frame(design, base_grid, specs, n_participants) -> pd.DataFrame:

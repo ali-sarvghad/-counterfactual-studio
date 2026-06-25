@@ -31,8 +31,12 @@ Under active development.
 
 - [x] **Phase 1 — core engine** (`backend/studio/`): design spec, the paper as a
   built-in template, Wilkinson/brms formula builder, fit + counterfactual
-  sampling for both paths, exporters (datasets, report, scripts).
-- [ ] Phase 2 — FastAPI backend (projects, upload, async fit jobs, downloads).
+  sampling for both paths, Hampel outlier filter, exporters (datasets, report,
+  scripts).
+- [x] **Phase 2 — FastAPI backend** (`backend/api/`): project CRUD, templates,
+  design validation + live "what does this imply?" previews, CSV upload with
+  column mapping, async fit jobs with status polling, counterfactual generation
+  for both paths, summaries, and artifact downloads.
 - [ ] Phase 3 — React wizard UI with explainers and live previews.
 - [ ] Phase 4 — paper-style result visualizations.
 
@@ -42,13 +46,51 @@ Under active development.
 participant-studio/
   backend/
     requirements.txt
-    studio/
-      spec.py        # StudyDesign / Factor / Outcome data model
-      templates.py   # the CHI '25 design as a ready-to-load template
-      formula.py     # design -> Bambi & brms formulas
-      engine.py      # fit, posterior + assumptions counterfactual generation
-      export.py      # datasets, reproducibility report, emitted scripts
+    pytest.ini
+    studio/                # engine (no web deps)
+      spec.py              # StudyDesign / Factor / Outcome data model
+      templates.py         # the CHI '25 design as a ready-to-load template
+      formula.py           # design -> Bambi & brms formulas
+      engine.py            # fit, posterior + assumptions counterfactual generation
+      preprocess.py        # Hampel outlier filter (paper section 4.1)
+      analysis.py          # per-cell distribution summaries for charts
+      export.py            # datasets, reproducibility report, emitted scripts
+    api/                   # FastAPI layer
+      main.py              # app + CORS + static frontend mount
+      routes.py            # all endpoints
+      schemas.py           # request/response models
+      store.py             # SQLite metadata + on-disk artifacts
+      jobs.py              # async fit runner + draws cache (de)serialization
+      previews.py          # analytic "what does this choice imply?" helpers
+    tests/                 # fast unit/API tests + slow MCMC integration tests
 ```
+
+## Running the backend
+
+```bash
+cd participant-studio/backend
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements-dev.txt
+uvicorn api.main:app --reload          # http://localhost:8000  (docs at /docs)
+pytest                                  # fast tests
+pytest --run-slow                       # also fit real Bayesian models
+```
+
+### Key endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/templates` | list built-in designs (incl. the paper) |
+| POST | `/api/designs/validate` | validate a design, return Bambi/brms formulas |
+| POST | `/api/designs/preview-outcome` | implied participant spread for a target mean |
+| POST | `/api/designs/preview-prior` | what a prior implies for the outcome |
+| POST | `/api/projects` | create a project (from a template or design) |
+| POST | `/api/projects/{id}/data/upload` | upload a CSV, get a suggested column mapping |
+| POST | `/api/projects/{id}/data/commit` | map columns, optional Hampel filter |
+| POST | `/api/projects/{id}/fit` | start an async Bayesian fit |
+| GET | `/api/projects/{id}/status` | poll fit status + diagnostics |
+| POST | `/api/projects/{id}/generate` | generate counterfactuals (posterior or assumptions) |
+| GET | `/api/projects/{id}/download/{name}` | download an artifact |
 
 ## Core concepts
 
