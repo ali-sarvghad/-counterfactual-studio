@@ -37,8 +37,12 @@ Under active development.
   design validation + live "what does this imply?" previews, CSV upload with
   column mapping, async fit jobs with status polling, counterfactual generation
   for both paths, summaries, and artifact downloads.
-- [ ] Phase 3 — React wizard UI with explainers and live previews.
-- [ ] Phase 4 — paper-style result visualizations.
+- [x] **Phase 3 — React wizard UI** (`frontend/`): a guided, path-aware wizard
+  (concept → design → data/assumptions → fit → generate → results) with inline
+  explainers, live "what does this imply?" previews, fit diagnostics, and
+  downloads. Includes paper-style distribution charts (Phase 4 folded in).
+- [ ] Future — richer prior editor, task/visualization individual-level
+  rank charts (paper Figures 3/5/6b/7b), saved projects dashboard.
 
 ## Layout
 
@@ -91,6 +95,35 @@ pytest --run-slow                       # also fit real Bayesian models
 | GET | `/api/projects/{id}/status` | poll fit status + diagnostics |
 | POST | `/api/projects/{id}/generate` | generate counterfactuals (posterior or assumptions) |
 | GET | `/api/projects/{id}/download/{name}` | download an artifact |
+
+## Running the frontend
+
+```bash
+cd participant-studio/frontend
+npm install
+npm run dev        # http://localhost:5173 (proxies /api to :8000)
+npm run build      # outputs frontend/dist, which the backend serves at /
+```
+
+In production, build the frontend and run only the backend — `api/main.py`
+mounts `frontend/dist` at `/`, so the whole app is served from one process.
+
+## The wizard
+
+1. **Start** — pick a path (your data, or assumptions) and a starting design
+   (the paper's, or blank).
+2. **Design** — define factors (within/between), outcomes (families), with live
+   validation and the generated Bambi/brms formulas.
+3a. **Data** (data path) — upload a CSV, map columns, optionally Hampel-filter.
+3b. **Assumptions** (no-data path) — set expected per-cell values and a
+   between-participant spread, with a live preview of the implied population.
+4. **Model & fit** (data path) — inspect formulas and priors (with
+   prior-predictive previews), choose sampler settings, fit, and read R̂/ESS
+   diagnostics with plain-language interpretation.
+5. **Generate** — choose how many counterfactual participants and a seed.
+6. **Results** — paper-style distribution charts, a data preview, and downloads
+   (both datasets, the design JSON, the reproducibility report, and runnable
+   Bambi/brms scripts).
 
 ## Core concepts
 

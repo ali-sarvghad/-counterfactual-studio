@@ -105,6 +105,17 @@ def test_project_and_assumptions_generation(client):
     assert gen["n_trials"] == 40 * 6 * 2
     assert gen["summary"]["outcomes"]["accuracy"]["overall"]["p2.5"] >= 0.25
     assert "cell_means.csv" in gen["artifacts"]
+    assert gen["cell_means_preview"], "preview rows for the results table"
+
+    # the contract the Results charts depend on: by_factor rows with percentiles
+    by_factor = gen["summary"]["outcomes"]["accuracy"]["by_factor"]
+    assert set(by_factor) == {"vis", "age"}
+    vis_rows = by_factor["vis"]
+    assert {r["level"] for r in vis_rows} == {"Bar", "Line", "Table"}
+    for r in vis_rows:
+        assert {"p2.5", "p25", "p50", "p75", "p97.5"} <= set(r)
+    # sorted best-first for accuracy -> Table (0.9) leads
+    assert vis_rows[0]["level"] == "Table"
 
     # download artifacts
     cm = client.get(f"/api/projects/{pid}/download/cell_means.csv")
