@@ -1,3 +1,13 @@
+---
+title: Counterfactual Participant Studio
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Counterfactual Participant Studio
 
 A guided web application that lets researchers generate **simulated
