@@ -144,6 +144,48 @@ def test_posterior_requires_data_before_fit(client):
 # Slow: full data path through the API
 # --------------------------------------------------------------------------- #
 @pytest.mark.slow
+def test_upload_first_profile_and_commit(client):
+    """The upload-first flow: profile a CSV, build a design from it, commit."""
+    import numpy as np
+
+    pid = client.post("/api/projects", json={"template": "blank"}).json()["id"]
+    rng = np.random.default_rng(1)
+    rows = []
+    for p in range(20):
+        for vis in ["Bar", "Line", "Pie"]:
+            rows.append(dict(
+                participant=f"u{p}", vis=vis,
+                correct=int(rng.random() < 0.7),
+                rt=float(np.exp(rng.normal(0.5, 0.4))),
+            ))
+    csv = pd.DataFrame(rows).to_csv(index=False).encode()
+
+    client.post(f"/api/projects/{pid}/data/upload",
+                files={"file": ("d.csv", io.BytesIO(csv), "text/csv")})
+
+    prof = client.post(f"/api/projects/{pid}/data/profile").json()
+    roles = {c["original"]: c["role"] for c in prof["columns"]}
+    assert roles == {"participant": "participant", "vis": "factor",
+                     "correct": "outcome", "rt": "outcome"}
+    fam = {c["original"]: c.get("family") for c in prof["columns"]}
+    assert fam["correct"] == "bernoulli" and fam["rt"] == "lognormal"
+    # numeric outcomes carry a value sample for the UI histogram
+    assert prof["columns"][2]["samples"]
+
+    # save the inferred design and commit using the explicit name->column mapping
+    client.put(f"/api/projects/{pid}/design",
+               json={"design": prof["suggested_design"]})
+    commit = client.post(f"/api/projects/{pid}/data/commit",
+                         json={"mapping": prof["mapping"], "apply_hampel": False})
+    assert commit.status_code == 200
+    assert commit.json()["n_rows"] == 60
+
+
+def test_profile_requires_upload_first(client):
+    pid = client.post("/api/projects", json={"template": "blank"}).json()["id"]
+    assert client.post(f"/api/projects/{pid}/data/profile").status_code == 400
+
+
 def test_data_path_upload_fit_generate(client):
     import numpy as np
     import time as _time

@@ -9,7 +9,7 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from studio import analysis, engine
+from studio import analysis, engine, profile
 from studio.export import (
     bambi_script,
     brms_script,
@@ -208,16 +208,15 @@ async def upload_data(project_id: str, file: UploadFile = File(...)) -> dict[str
     }
 
 
-@router.post("/projects/{project_id}/data/commit")
-def commit_data(project_id: str, body: ColumnMapping) -> dict[str, Any]:
-    proj = _project_or_404(project_id)
-    design = StudyDesign.from_dict(proj["design"])
+def _commit_mapped(project_id: str, design: StudyDesign,
+                   mapping: dict[str, str], apply_hampel: bool) -> dict[str, Any]:
+    """Shared commit: rename CSV columns to the design's names, optionally filter."""
     upload = store.project_dir(project_id) / "upload.csv"
     if not upload.exists():
         raise HTTPException(400, "No uploaded file to commit; upload first.")
     df = pd.read_csv(upload)
     # rename selected columns to the design's canonical names
-    rename = {src: role for role, src in body.mapping.items() if src in df.columns}
+    rename = {src: role for role, src in mapping.items() if src in df.columns}
     df = df.rename(columns=rename)
     needed = [design.grouping] + [f.name for f in design.factors] + \
              [o.name for o in design.outcomes]
@@ -227,12 +226,30 @@ def commit_data(project_id: str, body: ColumnMapping) -> dict[str, Any]:
     df = df[needed]
 
     report = {}
-    if body.apply_hampel:
+    if apply_hampel:
         df, report = hampel_filter(design, df)
     df.to_csv(store.data_csv(project_id), index=False)
-    store.set_data(project_id, len(df), body.mapping)
+    store.set_data(project_id, len(df), mapping)
     return {"n_rows": int(len(df)), "hampel": report,
             "project": _detail(_project_or_404(project_id))}
+
+
+@router.post("/projects/{project_id}/data/commit")
+def commit_data(project_id: str, body: ColumnMapping) -> dict[str, Any]:
+    proj = _project_or_404(project_id)
+    design = StudyDesign.from_dict(proj["design"])
+    return _commit_mapped(project_id, design, body.mapping, body.apply_hampel)
+
+
+@router.post("/projects/{project_id}/data/profile")
+def profile_data(project_id: str) -> dict[str, Any]:
+    """Auto-detect roles + distribution families from the uploaded CSV."""
+    _project_or_404(project_id)
+    upload = store.project_dir(project_id) / "upload.csv"
+    if not upload.exists():
+        raise HTTPException(400, "No uploaded file to profile; upload first.")
+    df = pd.read_csv(upload)
+    return profile.profile_dataframe(df)
 
 
 # --------------------------------------------------------------------------- #

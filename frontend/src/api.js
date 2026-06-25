@@ -41,6 +41,8 @@ export const api = {
     return req("POST", `/projects/${id}/data/upload`, fd, true);
   },
   commitData: (id, b) => req("POST", `/projects/${id}/data/commit`, b),
+  profileData: (id) => req("POST", `/projects/${id}/data/profile`),
+  commitDataAuto: (id, b) => req("POST", `/projects/${id}/data/commit-auto`, b),
 
   startFit: (id, b) => req("POST", `/projects/${id}/fit`, b),
   fitStatus: (id) => req("GET", `/projects/${id}/status`),

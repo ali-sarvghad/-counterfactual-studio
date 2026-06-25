@@ -11,8 +11,8 @@ import { Results } from "./steps/Results.jsx";
 const FLOWS = {
   posterior: [
     { key: "concept", title: "Start", C: Concept },
-    { key: "design", title: "Design", C: Design },
     { key: "data", title: "Data", C: DataStep },
+    { key: "design", title: "Design", C: Design },
     { key: "fit", title: "Model & fit", C: FitStep },
     { key: "generate", title: "Generate", C: Generate },
     { key: "results", title: "Results", C: Results },

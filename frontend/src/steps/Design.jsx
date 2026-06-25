@@ -81,7 +81,7 @@ function OutcomeEditor({ outcome, onChange, onRemove }) {
   );
 }
 
-export function Design({ project, setProject, next, back }) {
+export function Design({ project, setProject, next, back, path, shared }) {
   const [design, setDesign] = useState(project.design);
   const [validation, setValidation] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -111,6 +111,12 @@ export function Design({ project, setProject, next, back }) {
     try {
       const proj = await api.updateDesign(project.id, design);
       setProject(proj);
+      // Data path: re-apply the upload with the (possibly edited) design so the
+      // fit sees data consistent with the confirmed variables and families.
+      if (path === "posterior" && shared && shared.dataMapping) {
+        await api.commitData(project.id, {
+          mapping: shared.dataMapping, apply_hampel: !!shared.hampel });
+      }
       next();
     } catch (e) {
       setErr(e.message);
@@ -124,6 +130,15 @@ export function Design({ project, setProject, next, back }) {
       <h2>Define your study</h2>
       <p className="lead">A <b>factor</b> is something you vary (a chart type, a
         task). An <b>outcome</b> is what you measure (accuracy, time).</p>
+
+      {path === "posterior" && shared && shared.dataMapping && (
+        <Explainer>
+          We pre-filled this from your uploaded data — variable names,
+          categories, and each outcome’s distribution. <b>Review and adjust</b>
+          anything that looks off (especially whether each factor varies
+          <i> within</i> or <i>between</i> participants), then continue.
+        </Explainer>
+      )}
 
       <Explainer>
         <b>Within vs between participants</b> is the key choice. A

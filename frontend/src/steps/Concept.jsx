@@ -3,7 +3,6 @@ import { api } from "../api.js";
 import { Explainer } from "../components/ui.jsx";
 
 export function Concept({ path, setPath, setProject, patchShared, next }) {
-  const [start, setStart] = useState("paper"); // "paper" | "blank"
   const [name, setName] = useState("My simulation");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -12,7 +11,10 @@ export function Concept({ path, setPath, setProject, patchShared, next }) {
     setBusy(true);
     setErr(null);
     try {
-      const proj = await api.createProject({ name, template: start });
+      // The data path builds its design from the uploaded CSV, so it starts
+      // blank; the assumptions path starts from the worked paper example.
+      const template = path === "posterior" ? "blank" : "paper";
+      const proj = await api.createProject({ name, template });
       setProject(proj);
       patchShared({ generation: null, fitDiagnostics: null, committed: false });
       next();
@@ -59,21 +61,13 @@ export function Concept({ path, setPath, setProject, patchShared, next }) {
         </div>
       </div>
 
-      <h3 style={{ marginTop: 22 }}>2. Start from…</h3>
-      <div className="choices">
-        <div className={`choice ${start === "paper" ? "sel" : ""}`}
-          onClick={() => setStart("paper")}>
-          <h3>The paper’s design</h3>
-          <p>Age × Task × Visualization, with accuracy and time outcomes,
-            pre-filled. Best for learning — tweak a familiar example.</p>
-        </div>
-        <div className={`choice ${start === "blank" ? "sel" : ""}`}
-          onClick={() => setStart("blank")}>
-          <h3>A blank design</h3>
-          <p>One factor and one outcome to start. Build your own study from
-            scratch.</p>
-        </div>
-      </div>
+      <p className="hint" style={{ marginTop: 14 }}>
+        {path === "posterior"
+          ? "Next you’ll upload your CSV — we read it and set up the variables and "
+            + "their distributions for you automatically."
+          : "Next you’ll start from the paper’s worked example and adjust the "
+            + "expected effects to match your assumptions."}
+      </p>
 
       <div className="field" style={{ marginTop: 18, maxWidth: 360 }}>
         <label>Project name</label>
