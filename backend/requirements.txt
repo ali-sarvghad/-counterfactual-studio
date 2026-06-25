@@ -1,0 +1,22 @@
+# Counterfactual Participant Studio -- backend dependencies.
+# Versions verified to install and fit/sample together on Python 3.11.
+#
+# matplotlib is pinned < 3.9 because arviz_plots (pulled in transitively by
+# arviz's preview module) references matplotlib.style.core, which was removed
+# in 3.9. We render figures with Vega-Lite on the frontend, not matplotlib,
+# so this constraint is harmless here.
+
+bambi==0.17.2
+pymc==5.28.5
+arviz==0.19.0
+pytensor==2.38.3
+numpy==2.4.6
+pandas==3.0.3
+scipy==1.17.1
+matplotlib==3.8.4
+
+# Web layer
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic==2.10.4
