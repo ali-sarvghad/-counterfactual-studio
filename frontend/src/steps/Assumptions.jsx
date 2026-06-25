@@ -100,7 +100,13 @@ export function Assumptions({ project, patchShared, next, back }) {
             background: "#fbfcfe" }}>
             <h3 style={{ marginTop: 0 }}>{o.name} <span className="tag">{o.family}</span></h3>
             <div className="grid2">
-              <Field label="Between-participant spread (link scale)"
+              <Field label="Between-participant spread (link scale)" tip={
+                <>How much individuals differ from one another. <b>0</b> = everyone
+                identical; bigger = a more varied, realistic population.
+                “Link scale” means it’s set on the model’s internal scale, so the
+                same number implies different real-world spreads per distribution —
+                the preview just below shows what your value actually implies.
+                {" "}<b>Suggested:</b> 0.3–0.5 for moderate individual differences.</>}
                 hint="How different individuals are. Bigger = more heterogeneous.">
                 <input type="range" min="0" max="2" step="0.05"
                   value={betweenSd[o.name]}
@@ -108,7 +114,10 @@ export function Assumptions({ project, patchShared, next, back }) {
                     [o.name]: parseFloat(e.target.value) })} />
                 <span className="hint">{betweenSd[o.name]}</span>
               </Field>
-              <Field label="Quick fill all cells with a value">
+              <Field label="Quick fill all cells with a value" tip={
+                <>Type one number to set the expected <b>{o.name}</b> for every
+                factor combination at once. You can then fine-tune individual
+                cells in the table below.</>}>
                 <input type="number" step="any"
                   onChange={(e) => e.target.value !== "" &&
                     fillAll(o.name, parseFloat(e.target.value))}

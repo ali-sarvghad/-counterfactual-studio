@@ -21,18 +21,28 @@ function FactorEditor({ factor, onChange, onRemove }) {
   return (
     <div className="factor-row">
       <div className="grid3">
-        <Field label="Factor name">
+        <Field label="Factor name" tip={
+          <><b>What you varied</b> in the study (e.g. visualization, task). It
+          becomes a variable in the model, so use letters, numbers, or
+          underscores — no spaces.</>}>
           <input type="text" value={factor.name}
             onChange={(e) => set("name", e.target.value)} />
         </Field>
-        <Field label="Type">
+        <Field label="Type" tip={
+          <><b>Categorical</b> = a fixed set of named conditions (Bar, Line,
+          Pie). <b>Continuous</b> = a number that varies smoothly (age in years,
+          font size). Most experimental factors are categorical.</>}>
           <select value={factor.kind || "categorical"}
             onChange={(e) => set("kind", e.target.value)}>
             <option value="categorical">Categorical</option>
             <option value="continuous">Continuous</option>
           </select>
         </Field>
-        <Field label="Varies…">
+        <Field label="Varies…" tip={
+          <><b>The most important choice here.</b> <b>Within</b> = every person
+          experiences all levels (each saw all chart types). <b>Between</b> =
+          each person is in only one level (one task, or one age group). It sets
+          the model’s random-effect structure.</>}>
           <select value={factor.role} onChange={(e) => set("role", e.target.value)}>
             <option value="within">Within each participant</option>
             <option value="between">Between participants</option>
@@ -41,6 +51,9 @@ function FactorEditor({ factor, onChange, onRemove }) {
       </div>
       {(factor.kind || "categorical") === "categorical" && (
         <Field label="Levels (comma-separated)"
+          tip={<>The named conditions of this factor, separated by commas. Need
+          at least two. Every counterfactual participant gets data at <b>every</b>
+          level of a within-participant factor.</>}
           hint="e.g. Bar, Line, Pie, Scatterplot, Table">
           <input type="text" value={levelsText}
             onChange={(e) => onLevels(e.target.value)} />
@@ -56,11 +69,17 @@ function OutcomeEditor({ outcome, onChange, onRemove }) {
   return (
     <div className="outcome-row">
       <div className="grid2">
-        <Field label="Outcome name">
+        <Field label="Outcome name" tip={
+          <><b>What you measured</b> (accuracy, time, errors). Becomes a variable
+          in the model — letters, numbers, or underscores only.</>}>
           <input type="text" value={outcome.name}
             onChange={(e) => set("name", e.target.value)} />
         </Field>
-        <Field label="Measurement type">
+        <Field label="Measurement type" tip={
+          <>The kind of number this is, which sets the statistical distribution
+          used to model it. <b>Binary</b> for correct/incorrect, <b>Positive &
+          skewed</b> for response times, <b>Symmetric</b> for ratings/scores,
+          <b> Counts</b> for errors or clicks. Pick what matches your measure.</>}>
           <select value={outcome.family}
             onChange={(e) => set("family", e.target.value)}>
             {FAMILIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -69,14 +88,22 @@ function OutcomeEditor({ outcome, onChange, onRemove }) {
       </div>
       <div className="grid2">
         {outcome.family === "bernoulli" && (
-          <Field label="Guessing floor"
+          <Field label="Guessing floor" tip={
+            <>For multiple-choice tasks: the chance of getting it right by pure
+            guessing. Accuracy can never fall below this floor. <b>Suggested:</b>
+            {" "}0.25 for a 4-option question (the paper’s value), 0.5 for
+            true/false, 0 if guessing isn’t possible.</>}
             hint="Chance of a correct guess. 0.25 for a 4-option question (the paper); 0 for none.">
             <input type="number" step="0.05" min="0" max="0.9"
               value={outcome.guess_rate ?? 0}
               onChange={(e) => set("guess_rate", parseFloat(e.target.value) || 0)} />
           </Field>
         )}
-        <Field label="Trials per cell"
+        <Field label="Trials per cell" tip={
+          <>How many separate questions/observations each participant answers per
+          combination of factor levels. More trials = less noise per simulated
+          participant. <b>Suggested:</b> 6 (the paper’s value); use 1 if you
+          model a single value per cell.</>}
           hint="Questions asked per factor combination (the paper used 6).">
           <input type="number" min="1" value={outcome.trials_per_cell ?? 1}
             onChange={(e) => set("trials_per_cell", parseInt(e.target.value) || 1)} />
@@ -155,7 +182,10 @@ export function Design({ project, setProject, next, back, path, shared }) {
         random-effect structure of the model.
       </Explainer>
 
-      <Field label="Participant identifier (grouping unit)">
+      <Field label="Participant identifier (grouping unit)" tip={
+        <>The name of the unit you’re simulating — usually <b>participant</b>.
+        Each counterfactual participant gets a full set of responses across your
+        factors. Use letters, numbers, or underscores only.</>}>
         <input type="text" value={design.grouping}
           onChange={(e) => patch({ grouping: e.target.value })}
           style={{ maxWidth: 280 }} />

@@ -4,10 +4,20 @@ export function Explainer({ children }) {
   return <div className="explainer">{children}</div>;
 }
 
-export function Field({ label, hint, children }) {
+// A circled "?" that reveals an explanation on hover or keyboard focus.
+export function InfoTip({ children, label = "More information" }) {
+  return (
+    <span className="infotip" tabIndex={0} role="note" aria-label={label}>
+      <span className="infotip-mark" aria-hidden="true">?</span>
+      <span className="infotip-pop" role="tooltip">{children}</span>
+    </span>
+  );
+}
+
+export function Field({ label, hint, tip, children }) {
   return (
     <div className="field">
-      {label && <label>{label}</label>}
+      {label && <label>{label}{tip && <InfoTip>{tip}</InfoTip>}</label>}
       {children}
       {hint && <div className="hint">{hint}</div>}
     </div>

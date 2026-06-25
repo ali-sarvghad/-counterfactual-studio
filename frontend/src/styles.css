@@ -97,6 +97,24 @@ input[type="text"], input[type="number"], select, textarea {
 input[type="range"] { width: 100%; }
 .field { margin-bottom: 14px; }
 .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+/* hover/focus help icon */
+.infotip { position: relative; display: inline-flex; vertical-align: middle;
+  margin-left: 6px; cursor: help; outline: none; }
+.infotip-mark { display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%; background: #dde3f0;
+  color: var(--accent); font-size: 11px; font-weight: 700; line-height: 1; }
+.infotip:hover .infotip-mark, .infotip:focus .infotip-mark { background: #c9d3ee; }
+.infotip-pop { display: none; position: absolute; left: 50%;
+  transform: translateX(-50%); bottom: calc(100% + 9px); width: 250px; z-index: 40;
+  background: #1f2737; color: #fff; padding: 10px 12px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 400; line-height: 1.45; text-align: left;
+  white-space: normal; box-shadow: 0 6px 24px rgba(0, 0, 0, .2); }
+.infotip-pop::after { content: ""; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%); border: 6px solid transparent; border-top-color: #1f2737; }
+.infotip-pop b { color: #aebfff; font-weight: 600; }
+.infotip:hover .infotip-pop, .infotip:focus .infotip-pop,
+.infotip:focus-within .infotip-pop { display: block; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
