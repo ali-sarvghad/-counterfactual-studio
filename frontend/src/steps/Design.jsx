@@ -11,6 +11,13 @@ const FAMILIES = [
 
 function FactorEditor({ factor, onChange, onRemove }) {
   const set = (k, v) => onChange({ ...factor, [k]: v });
+  // Keep the raw text the user is typing so a trailing comma (mid-typing the
+  // next level) isn't stripped by the parse-and-rejoin round trip.
+  const [levelsText, setLevelsText] = useState((factor.levels || []).join(", "));
+  const onLevels = (text) => {
+    setLevelsText(text);
+    set("levels", text.split(",").map((s) => s.trim()).filter(Boolean));
+  };
   return (
     <div className="factor-row">
       <div className="grid3">
@@ -35,9 +42,8 @@ function FactorEditor({ factor, onChange, onRemove }) {
       {(factor.kind || "categorical") === "categorical" && (
         <Field label="Levels (comma-separated)"
           hint="e.g. Bar, Line, Pie, Scatterplot, Table">
-          <input type="text" value={(factor.levels || []).join(", ")}
-            onChange={(e) =>
-              set("levels", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} />
+          <input type="text" value={levelsText}
+            onChange={(e) => onLevels(e.target.value)} />
         </Field>
       )}
       <button className="ghost" onClick={onRemove}>Remove factor</button>
