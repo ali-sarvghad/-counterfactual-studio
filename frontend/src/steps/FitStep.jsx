@@ -1,6 +1,46 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { Badge, Explainer, Field, Histogram, Spinner, fmtByFamily } from "../components/ui.jsx";
+import { Badge, Explainer, Field, Histogram, InfoTip, Spinner, fmtByFamily } from "../components/ui.jsx";
+
+// Plain-language help for the convergence diagnostics, including how to act.
+const DIAG_TIP = (
+  <>These three numbers check whether the MCMC sampler reliably explored the
+  model. A green <b>OK</b> badge means all good; <b>WARN</b> means borderline —
+  fine for a look, but improve the fit before relying on it; <b>FAIL</b> means
+  don’t trust it yet. Hover each number to see how to handle it.</>
+);
+const RHAT_TIP = (
+  <><b>R-hat</b> measures agreement between the independent sampler chains.
+  <b> Below 1.01</b> is good; 1.01–1.05 is borderline; above 1.05 means the
+  chains disagree and it hasn’t converged. <b>Fix:</b> raise <i>tune</i> and
+  <i> draws</i>, or simplify the design, then re-fit.</>
+);
+const ESS_TIP = (
+  <><b>Effective sample size</b> is how much independent information you have for
+  the hardest-to-estimate parameter — <b>higher is better</b>. A few hundred is
+  usually enough; very low means noisy estimates. <b>Fix:</b> increase
+  <i> draws</i> (and <i>tune</i>).</>
+);
+const DIV_TIP = (
+  <><b>Divergences</b> are steps where the sampler hit numerical trouble and may
+  have missed part of the distribution. <b>0 is ideal</b>; a few is usually
+  tolerable; many makes results untrustworthy. <b>Fix:</b> raise
+  <i> target_accept</i> toward 0.95–0.99, use tighter priors, or simplify the
+  model.</>
+);
+const SAMPLER_TIPS = {
+  draws: (<>Posterior samples kept <b>per chain</b> after warm-up. More =
+    smoother, more reliable estimates but slower. <b>Suggested:</b> 1000 (lower
+    to ~500 for a quick trial).</>),
+  tune: (<>Warm-up steps the sampler uses to calibrate itself, then discards.
+    More tuning helps convergence (lower R-hat, fewer divergences).
+    <b> Suggested:</b> 1000.</>),
+  chains: (<>Independent sampler runs started from different points; comparing
+    them is how R-hat detects trouble. <b>Suggested:</b> 4 (or 2 for a quick
+    trial).</>),
+  seed: (<>Fixes the random numbers so the fit is exactly reproducible. Any
+    integer works. <b>Suggested:</b> 1234.</>),
+};
 
 // Weakly-informed defaults matching the paper (logit and log scales).
 const DEFAULT_PRIOR = { bernoulli: [0, 1], lognormal: [3.4, 1], gaussian: [0, 5], poisson: [1, 1] };
@@ -114,7 +154,7 @@ export function FitStep({ project, shared, patchShared, next, back }) {
       <h3>Sampler settings</h3>
       <div className="grid2">
         {["draws", "tune", "chains", "seed"].map((k) => (
-          <Field key={k} label={k}>
+          <Field key={k} label={k} tip={SAMPLER_TIPS[k]}>
             <input type="number" value={settings[k]}
               onChange={(e) => setSettings({ ...settings, [k]: parseInt(e.target.value) || 0 })} />
           </Field>
@@ -133,13 +173,14 @@ export function FitStep({ project, shared, patchShared, next, back }) {
 
       {diag && (
         <div style={{ marginTop: 16 }}>
-          <h3>Convergence diagnostics</h3>
+          <h3>Convergence diagnostics <InfoTip>{DIAG_TIP}</InfoTip></h3>
           {Object.entries(diag).map(([n, d]) => (
             <div key={n} style={{ marginBottom: 8 }}>
               <b>{n}</b> <Badge status={d.status}>{d.status.toUpperCase()}</Badge>
               <span className="hint" style={{ marginLeft: 8 }}>
-                max R̂ {d.max_rhat.toFixed(3)} · min ESS {Math.round(d.min_ess_bulk)} ·
-                divergences {d.n_divergences}
+                max R̂<InfoTip>{RHAT_TIP}</InfoTip> {d.max_rhat.toFixed(3)} ·
+                min ESS<InfoTip>{ESS_TIP}</InfoTip> {Math.round(d.min_ess_bulk)} ·
+                divergences<InfoTip>{DIV_TIP}</InfoTip> {d.n_divergences}
               </span>
               <div className="hint">{d.interpretation}</div>
             </div>
