@@ -1,0 +1,26 @@
+# Python virtual environments (the engine's stats stack is installed here)
+.venv/
+.venv-check/
+venv/
+env/
+
+# Python caches / build
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# Local project data / generated artifacts
+backend/data/
+*.sqlite
+*.sqlite3
+
+# OS noise
+.DS_Store
