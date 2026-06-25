@@ -117,11 +117,17 @@ Bambi/brms scripts).
 1. Open **[the Space](https://huggingface.co/spaces/ali-sarvghad/counterfactual-studio)**.
    (If it shows "Building" or "Sleeping," give it a moment to wake up.)
 2. Pick a path on the start screen: **I have data** or **I'm designing from
-   assumptions**.
+   assumptions**. (No dataset handy? Grab the sample below.)
 3. Follow the wizard. Hover the small circled **?** next to any field for an
    explanation and suggested values.
 4. At the end, preview the simulated participants and download the datasets and
    scripts.
+
+> **Try it with the sample dataset.** Download
+> [`examples/sample_study.csv`](examples/sample_study.csv) (120 rows, synthetic)
+> and upload it on the data path. The tool should detect `accuracy` as **Binary**,
+> `response_time` as **Positive & skewed**, and `errors` as **Counts** — see
+> [`examples/README.md`](examples/README.md) for the full expected breakdown.
 
 > **Privacy note.** On the data path, your CSV is uploaded to the server only to
 > fit the model; the downloadable participants are *simulated*, not your raw
@@ -146,7 +152,8 @@ Bambi/brms scripts).
 
 1. **Start.** Choose "I have pilot / study data" and name the project.
 2. **Upload & auto-detect.** Drop in a **long-format CSV** (one row per trial,
-   with columns for the participant, each factor, and each outcome). The tool
+   with columns for the participant, each factor, and each outcome) — or use the
+   ready-made [`examples/sample_study.csv`](examples/sample_study.csv). The tool
    immediately analyzes every column and proposes:
    - the **participant** column,
    - which columns are **factors** vs **measured outcomes**,
