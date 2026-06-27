@@ -67,6 +67,28 @@ def submit_fit(project_id: str, fit_kwargs: dict[str, Any]) -> None:
     _EXECUTOR.submit(_run_fit, project_id, fit_kwargs)
 
 
+def _friendly_fit_error(exc: Exception) -> str:
+    """Translate a raw sampler/backend exception into actionable guidance."""
+    name = type(exc).__name__
+    msg = str(exc)
+    if name == "SamplingError" or "Initial evaluation" in msg or "-inf" in msg:
+        return ("The model couldn't start sampling. This almost always means "
+                "some factor combinations have no data (an “empty cell”), or the "
+                "design has more parameters than data. Go back to Design and "
+                "switch to main effects only, use fewer factors, or merge small "
+                "categories — then re-fit.")
+    if "positive" in msg.lower() and "log" in msg.lower():
+        return ("An outcome you marked as a response time / positive value has "
+                "zero or negative numbers, which the log step can't handle. "
+                "Check that outcome's values or change its distribution.")
+    if name in ("LinAlgError", "PosDefError"):
+        return ("The model is numerically unstable for this data, usually from "
+                "too many parameters for too few rows. Simplify the design "
+                "(main effects only, fewer factors) and re-fit.")
+    return ("The fit failed unexpectedly. Try simplifying the design (main "
+            "effects only or fewer factors) and re-fitting.")
+
+
 def _run_fit(project_id: str, fit_kwargs: dict[str, Any]) -> None:
     try:
         proj = store.get_project(project_id)
@@ -79,6 +101,7 @@ def _run_fit(project_id: str, fit_kwargs: dict[str, Any]) -> None:
         diagnostics = {n: f.diagnostics for n, f in bundle.fits.items()}
         store.set_fit_result(project_id, diagnostics)
     except Exception as exc:  # noqa: BLE001 - report any failure back to the user
+        friendly = _friendly_fit_error(exc)
+        technical = f"{type(exc).__name__}: {exc}\n" + traceback.format_exc(limit=3)
         store.set_status(project_id, "failed",
-                         fit_error=f"{type(exc).__name__}: {exc}\n"
-                                   + traceback.format_exc(limit=3))
+                         fit_error=f"{friendly}\n\n— — —\nTechnical detail:\n{technical}")

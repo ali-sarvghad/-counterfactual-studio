@@ -79,7 +79,7 @@ function PriorPreview({ outcome }) {
   );
 }
 
-export function FitStep({ project, shared, patchShared, next, back }) {
+export function FitStep({ project, setProject, shared, patchShared, next, back }) {
   const design = project.design;
   const [formulas, setFormulas] = useState(null);
   const [settings, setSettings] = useState({ draws: 1000, tune: 1000, chains: 4, seed: 1234 });
@@ -87,13 +87,38 @@ export function FitStep({ project, shared, patchShared, next, back }) {
   const [diag, setDiag] = useState(shared.fitDiagnostics || null);
   const [elapsed, setElapsed] = useState(0);
   const [err, setErr] = useState(null);
+  const [pf, setPf] = useState(null);
+  const [fixing, setFixing] = useState(false);
   const poll = useRef(null);
   const timer = useRef(null);
 
+  function runPreflight() {
+    api.preflight(project.id).then(setPf).catch(() => setPf(null));
+  }
+
   useEffect(() => {
     api.validate(design).then((v) => setFormulas(v.formulas)).catch(() => {});
+    runPreflight();
     return () => { clearInterval(poll.current); clearInterval(timer.current); };
   }, []);
+
+  async function applyFix(fix) {
+    setFixing(true);
+    try {
+      const next = { ...project.design, interaction_order: fix.value };
+      const proj = await api.updateDesign(project.id, next);
+      setProject(proj);
+      api.validate(next).then((v) => setFormulas(v.formulas)).catch(() => {});
+      const res = await api.preflight(project.id);
+      setPf(res);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setFixing(false);
+    }
+  }
+
+  const blocked = pf && pf.ok === false;
 
   async function startFit() {
     setErr(null);
@@ -141,6 +166,28 @@ export function FitStep({ project, shared, patchShared, next, back }) {
         </div>
       )}
 
+      {pf && pf.issues && pf.issues.length > 0 && (
+        <div style={{ marginTop: 6 }}>
+          {pf.issues.map((iss, i) => (
+            <div key={i} className={`preflight ${iss.severity}`}>
+              <div className="preflight-title">
+                {iss.severity === "error" ? "⛔" : "⚠️"} {iss.title}
+              </div>
+              <div style={{ marginTop: 4 }}>{iss.detail}</div>
+              <ul className="preflight-sugg">
+                {iss.suggestions.map((s, j) => <li key={j}>{s}</li>)}
+              </ul>
+              {iss.fix && (
+                <button className="primary" onClick={() => applyFix(iss.fix)}
+                  disabled={fixing}>
+                  {fixing ? "Applying…" : iss.fix.label}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <h3>Understand your priors</h3>
       <Explainer>
         Priors say what’s plausible <i>before</i> seeing data. The paper used
@@ -164,11 +211,14 @@ export function FitStep({ project, shared, patchShared, next, back }) {
         mirror a robust run; lower them for a quick trial.</div>
 
       <div style={{ marginTop: 14 }}>
-        <button className="primary" onClick={startFit} disabled={status === "fitting"}>
+        <button className="primary" onClick={startFit}
+          disabled={status === "fitting" || blocked || fixing}>
           {status === "fitting" ? <Spinner label={`Fitting… ${elapsed}s`} /> : "Fit the model"}
         </button>
         {status === "fitting" && <span className="hint" style={{ marginLeft: 10 }}>
           MCMC can take a few minutes for large designs.</span>}
+        {blocked && status !== "fitting" && <span className="hint" style={{ marginLeft: 10 }}>
+          Resolve the issue above before fitting.</span>}
       </div>
 
       {diag && (

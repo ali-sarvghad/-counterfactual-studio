@@ -215,6 +215,29 @@ export function Design({ project, setProject, next, back, path, shared }) {
         + Add outcome
       </button>
 
+      {design.factors.length >= 2 && (
+        <Field label="How factors combine" tip={
+          <><b>Main effects only</b> models each factor on its own — simplest and
+          safest, and it always fits. <b>Two-way</b> and <b>Full</b> also estimate
+          how factors interact, which is richer but needs data in <i>every</i>
+          combination; with limited data those can fail to fit. The fit screen
+          checks this for you before running. <b>Suggested:</b> main effects
+          unless you specifically need interactions and have plenty of data.</>}>
+          <select
+            value={(design.interaction_order === null
+              || design.interaction_order === undefined
+              || design.interaction_order >= design.factors.length)
+              ? "full" : String(design.interaction_order)}
+            onChange={(e) => patch({ interaction_order:
+              e.target.value === "full" ? null : Number(e.target.value) })}
+            style={{ maxWidth: 360 }}>
+            <option value="0">Main effects only (simplest, always fits)</option>
+            <option value="1">Two-way interactions</option>
+            <option value="full">Full interaction (every combination)</option>
+          </select>
+        </Field>
+      )}
+
       <div className="panel" style={{ boxShadow: "none", marginTop: 20,
         background: "#fbfcfe" }}>
         <h3 style={{ marginTop: 0 }}>Model preview</h3>

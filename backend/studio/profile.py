@@ -267,13 +267,15 @@ def profile_dataframe(df: pd.DataFrame) -> dict[str, Any]:
         )
         columns.append(entry)
 
-    n_factors = len(factors)
     design = StudyDesign(
         name="Detected from your data",
         factors=factors,
         outcomes=outcomes,
         grouping=grouping_name or "participant",
-        interaction_order=None if n_factors <= 2 else 1,
+        # Start with main effects only: it fits for almost any data (no empty-cell
+        # failures), and the user can opt into interactions on the Design screen,
+        # where a pre-fit check guards against combinations with no data.
+        interaction_order=0,
         drop_intercept=True,
         description="Design inferred from the uploaded CSV; confirm or edit below.",
     )

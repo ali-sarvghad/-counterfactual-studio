@@ -9,7 +9,7 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from studio import analysis, engine, profile
+from studio import analysis, engine, preflight, profile
 from studio.export import (
     bambi_script,
     brms_script,
@@ -255,6 +255,18 @@ def profile_data(project_id: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # Fitting (data path)
 # --------------------------------------------------------------------------- #
+@router.post("/projects/{project_id}/preflight")
+def preflight_check(project_id: str) -> dict[str, Any]:
+    """Check the committed data against the design for fit-blocking problems."""
+    proj = _project_or_404(project_id)
+    design = StudyDesign.from_dict(proj["design"])
+    csv = store.data_csv(project_id)
+    if not csv.exists():
+        return {"ok": True, "issues": [], "n_obs": 0,
+                "recommended_interaction_order": design.interaction_order}
+    return preflight.preflight(design, pd.read_csv(csv))
+
+
 @router.post("/projects/{project_id}/fit")
 def start_fit(project_id: str, body: FitRequest) -> dict[str, Any]:
     proj = _project_or_404(project_id)

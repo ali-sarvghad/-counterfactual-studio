@@ -118,6 +118,15 @@ input[type="range"] { width: 100%; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 
+/* pre-fit issue cards */
+.preflight { border-radius: 8px; padding: 12px 14px; margin: 8px 0;
+  font-size: 13.5px; border: 1px solid; }
+.preflight.error { background: #fdf2f2; border-color: #f3c2c2; color: #7a1f1f; }
+.preflight.warning { background: #fff8ec; border-color: #f0d9a8; color: #6b4e16; }
+.preflight-title { font-weight: 700; font-size: 14px; }
+.preflight-sugg { margin: 8px 0 10px; padding-left: 18px; }
+.preflight-sugg li { margin: 3px 0; }
+
 /* explainer callout */
 .explainer {
   border-left: 3px solid var(--accent); background: #f4f7ff; border-radius: 8px;

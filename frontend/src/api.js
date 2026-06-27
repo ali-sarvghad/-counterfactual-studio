@@ -44,6 +44,7 @@ export const api = {
   profileData: (id) => req("POST", `/projects/${id}/data/profile`),
   commitDataAuto: (id, b) => req("POST", `/projects/${id}/data/commit-auto`, b),
 
+  preflight: (id) => req("POST", `/projects/${id}/preflight`),
   startFit: (id, b) => req("POST", `/projects/${id}/fit`, b),
   fitStatus: (id) => req("GET", `/projects/${id}/status`),
 

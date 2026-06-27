@@ -153,7 +153,9 @@ export function DataStep({ project, setProject, patchShared, next, back }) {
       grouping: partCol.name,
       factors,
       outcomes,
-      interaction_order: factors.length <= 2 ? null : 1,
+      // Main effects only by default — safe for any data; the user can add
+      // interactions on the Design screen, which checks for empty cells first.
+      interaction_order: 0,
       drop_intercept: true,
       description: "Inferred from your uploaded CSV — confirm on the next screen.",
     };
